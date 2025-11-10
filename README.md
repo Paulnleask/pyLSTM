@@ -1,16 +1,18 @@
 # 📈 pyLSTM
 
-A lightweight **Python + PyTorch** framework for **time-series forecasting** using **Long Short-Term Memory (LSTM)** neural networks.  
-It enables end-to-end stock prediction — from fetching historical data to model training, forecasting, and visualization.
+A lightweight **Python + PyTorch** framework for **time-series forecasting** using **Long Short-Term Memory (LSTM)** neural networks with deep learning.  
+It enables end-to-end stock prediction, from fetching historical data to model training, forecasting, and visualization.
 
 ---
 
 ## 🧩 Features
-- Fetch financial time series from **Yahoo! Finance**  
-- Train multi-horizon **LSTM regressors** on stock data  
+- Fetch financial time series from **Yahoo! Finance** with yfinance
+- Train multi-horizon **LSTM regressors** on fetched stock data using PyTorch
 - Forecast future prices directly (no recursive predictions)  
-- Configurable normalization (standard or min–max)  
-- Visualize in-sample fits and out-of-sample forecasts  
+- Configurable normalization:
+    - Z-score standardization
+    - Min-Max scaling  
+- Visualize in-sample fits and out-of-sample forecasts using matplotlib
 - Generates clean CSV artifacts and plots for reproducibility  
 
 ---
