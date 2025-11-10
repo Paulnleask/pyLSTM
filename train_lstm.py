@@ -39,12 +39,14 @@ import sys
 
 # ---------------- Hyper-parameters ----------------
 cutoff = 0.9            # Fraction of data (from start) used for training
-horizon = 270           # Number of future week days for forecasting (weekends ignored)
-seq_len = 270           # Lookback window length, e.g. 1 (daily), 30 (monthly), 90 (quarterly)
+horizon = 128           # Number of future week days for forecasting (weekends ignored)
+seq_len = 128           # Lookback window length, e.g. 1 (daily), 30 (monthly), 90 (quarterly)
 hidden_len = 64         # Dimension of the hidden state
 epochs = 1000           # Number of iterations 
 batch_size = 64         # Number of training samples processed per optimizer step
 lr = 1e-3               # Learning rate
+num_layers = 2          # Number of deep layers
+dropout = 0.4           # Dropout probability
 
 # ────────────────────────────────────────────────────────────────────────────────
 # Helper utilities
@@ -149,8 +151,6 @@ def main():
     ap.add_argument("--csv", required=True, type=str, help="CSV with Date,Open,High,Low,Close,Volume")
     ap.add_argument("--feature", default="Close", type=str)
     ap.add_argument("--target", default="logretrun", choices=["pirce", "logreturn", "delta".replace(",", "")], help="Prediction target (default: logretrun)")
-    ap.add_argument("--num_layers", default=1, type=int)
-    ap.add_argument("--dropout", default=0.0, type=float)
     ap.add_argument("--normalize", default="standard", choices=["standard", "minmax"], help="Normalization on target series (default: standard)")
     ap.add_argument("--outdir", default="artifacts", type=str)
     args = ap.parse_args()
@@ -217,6 +217,8 @@ def main():
 
     # ---------------- Normalization on training only data in target space ----------------
     work_train = work[:cutoff_idx_work]
+
+    # Minmax normalization
     if args.normalize == "minmax":
         w_min, w_max = float(np.min(work_train)), float(np.max(work_train))
         if w_max == w_min:
@@ -224,10 +226,14 @@ def main():
         def norm(v):   return (v - w_min) / (w_max - w_min)
         def denorm(v): return v * (w_max - w_min) + w_min
         norm_params = {"type": "minmax", "min": w_min, "max": w_max}
+    # Standardization (Z-Score normalization)
     else:
-        mu, sigma = float(np.mean(work_train)), float(np.std(work_train) + 1e-12)
-        def norm(v):   return (v - mu) / sigma
-        def denorm(v): return v * sigma + mu
+        mu = float(np.mean(work_train)) # Mean
+        sigma = float(np.std(work_train) + 1e-12) # Standard deviation
+        def norm(v):
+            return (v - mu) / sigma
+        def denorm(v):
+            return v * sigma + mu
         norm_params = {"type": "standard", "mean": mu, "std": sigma}
     work_norm = norm(work)
 
@@ -235,7 +241,7 @@ def main():
     X_all, Y_all = make_sequences_multi(work_norm, seq_len, horizon)
 
     # Each label corresponds to the first horizon step at work index i
-    label_indices = np.arange(seq_len, Nw - horizon + 1)
+    label_indices = np.arange(seq_len, Nw - horizon + 1) # e.g. [270, 271, ... , 2460]
     train_mask = label_indices < cutoff_idx_work
     X_train, Y_train = X_all[train_mask], Y_all[train_mask]
 
@@ -245,7 +251,7 @@ def main():
     # ---------------- 1. The model ----------------
     device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
     print_device_info()
-    model = LSTMRegressor(input_size=1, hidden_len=hidden_len, num_layers=args.num_layers, dropout=args.dropout, horizon=horizon).to(device)
+    model = LSTMRegressor(input_size=1, hidden_len=hidden_len, num_layers=num_layers, dropout=dropout, horizon=horizon).to(device)
 
     # ---------------- 2. Loss and optimizer ----------------
     loss_fn = nn.MSELoss()
@@ -293,8 +299,8 @@ def main():
         "horizon": horizon,
         "seq_len": seq_len,
         "hidden_len": hidden_len,
-        "num_layers": args.num_layers,
-        "dropout": args.dropout,
+        "num_layers": num_layers,
+        "dropout": dropout,
         "cutoff": cutoff,
         "normalize": norm_params,
         "optimizer": "adam",
