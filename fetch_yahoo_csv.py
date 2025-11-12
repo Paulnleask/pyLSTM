@@ -16,6 +16,7 @@ import argparse
 import yfinance as yf
 import pandas as pd
 from pathlib import Path
+import matplotlib.pyplot as plt
 
 # ---------------- Argument parser ----------------
 parser = argparse.ArgumentParser()
@@ -61,3 +62,19 @@ out["Date"] = pd.to_datetime(out["Date"]).dt.strftime("%Y-%m-%d")
 # ---------------- Output stock data to csv ----------------
 out.to_csv(outdir / args.out, index=False)
 print(f"Wrote {len(out)} rows to {args.out}")
+
+# ---------------- Plot historical stock data ----------------
+plt.figure(figsize=(12, 6))
+plt.plot(df["Date"], df["Open"], label="Open", linewidth=1.5)
+plt.plot(df["Date"], df["High"], label="High", linewidth=1.5, linestyle="-.")
+plt.plot(df["Date"], df["Low"], label="Low", linewidth=1.5, linestyle="--")
+plt.plot(df["Date"], df["Close"], label="Close", linewidth=1.5, linestyle=":")
+csv_title = Path(args.ticker)
+plt.title(f"{csv_title} Historical Stock Data")
+plt.xlabel("Date")
+plt.ylabel(f"Stock Price ($)")
+plt.legend()
+plt.tight_layout()
+out_png = f"Stock_Prices_{csv_title}.png"
+plt.savefig(out_png, dpi=150)
+print(f"Saved plot to {out_png}")

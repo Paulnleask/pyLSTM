@@ -22,7 +22,7 @@ Saves:
   - artifacts/train_preds.csv    (in-sample fitted PRICES for the first horizon step)
 
 To run (for example PLTR stock closing price with logreturn):
-    python train_lstm.py --csv data/PLTR.csv --feature Close --target logreturn --normalize standard --outdir artifacts
+    python train_lstm.py --csv data/NVDA.csv --feature Close --target logreturn --normalize standard --outdir artifacts
 """
 
 # ---------------- Import required libraries and dependencies ----------------
@@ -39,14 +39,14 @@ import sys
 
 # ---------------- Hyper-parameters ----------------
 cutoff = 0.9            # Fraction of data (from start) used for training
-horizon = 128           # Number of future week days for forecasting (weekends ignored)
+horizon = 270           # Number of future week days for forecasting (weekends ignored)
 seq_len = 128           # Lookback window length, e.g. 1 (daily), 30 (monthly), 90 (quarterly)
 hidden_len = 64         # Dimension of the hidden state
 epochs = 1000           # Number of iterations 
 batch_size = 64         # Number of training samples processed per optimizer step
 lr = 1e-3               # Learning rate
 num_layers = 2          # Number of deep layers
-dropout = 0.4           # Dropout probability
+dropout = 0.1           # Dropout probability
 
 # ────────────────────────────────────────────────────────────────────────────────
 # Helper utilities

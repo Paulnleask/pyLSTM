@@ -7,7 +7,7 @@ Predict the next H steps directly (no recursion) using the trained multi-horizon
 For logreturn/delta targets, reconstruct the PRICE path.
 
 To run (for example PLTR stock):
-    python predict_lstm.py --csv data/PLTR.csv --artifacts artifacts
+    python predict_lstm.py --csv data/NVDA.csv --artifacts artifacts
 """
 
 # ---------------- Import required libraries and dependencies ----------------

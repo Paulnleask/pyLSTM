@@ -7,7 +7,7 @@ Plot the original PRICE series, the in-sample fitted PRICES over the training re
 and the out-of-sample forecast PRICES produced by predict_lstm.py.
 
 To run (for example PLTR stock):
-    python plot_series.py --csv data/PLTR.csv --artifacts artifacts
+    python plot_series.py --csv data/NVDA.csv --artifacts artifacts
 """
 
 # ---------------- Import required libraries and dependencies ----------------
