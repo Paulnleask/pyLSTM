@@ -71,13 +71,10 @@ def main():
     tgt = cfg["target"]
     if tgt == "price":
         work = prices.astype(np.float32)
-        dates_work = dates
     elif tgt == "logreturn":
         work = np.diff(np.log(prices + 1e-12)).astype(np.float32)
-        dates_work = dates[1:]
     else:
         work = np.diff(prices).astype(np.float32)
-        dates_work = dates[1:]
 
     # ---------------- Normalization on training only data in target space ----------------
     norm = cfg["normalize"]
