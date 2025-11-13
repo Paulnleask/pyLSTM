@@ -43,16 +43,19 @@ class LSTMRegressor(nn.Module):
 # ────────────────────────────────────────────────────────────────────────────────
 
 def main():
+
+    # ---------------- Argument parser ----------------
     ap = argparse.ArgumentParser()
     ap.add_argument("--csv", required=True, type=str)
     ap.add_argument("--artifacts", default="artifacts", type=str)
     args = ap.parse_args()
 
+    # ---------------- Load model state ----------------
     artifacts = Path(args.artifacts)
     cfg = json.loads(Path(artifacts / "config.json").read_text())
     model_state = torch.load(artifacts / "model_state.pt", map_location="cpu", weights_only=True)
 
-    # Load CSV
+    # ---------------- Load stock csv ----------------
     df = pd.read_csv(args.csv)
     if cfg.get("date_column_present", False) and "Date" in df.columns:
         df["Date"] = pd.to_datetime(df["Date"])
@@ -60,10 +63,11 @@ def main():
     df[cfg["feature"]] = pd.to_numeric(df[cfg["feature"]], errors="coerce")
     df = df.dropna(subset=[cfg["feature"]]).reset_index(drop=True)
 
+    # ---------------- Extract numpy arrays for modelling ----------------
     prices = df[cfg["feature"]].astype(float).values
     dates  = df["Date"].values if "Date" in df.columns else np.arange(len(prices))
 
-    # Build target series for the input window
+    # ---------------- Build target series ----------------
     tgt = cfg["target"]
     if tgt == "price":
         work = prices.astype(np.float32)
@@ -75,19 +79,22 @@ def main():
         work = np.diff(prices).astype(np.float32)
         dates_work = dates[1:]
 
-    # Normalization (from training)
+    # ---------------- Normalization on training only data in target space ----------------
     norm = cfg["normalize"]
+
+    # Minmax normalization
     if norm["type"] == "minmax":
         w_min, w_max = norm["min"], norm["max"]
         def norm_f(v): return (v - w_min) / (w_max - w_min)
         def denorm_f(v): return v * (w_max - w_min) + w_min
+    # Standardization (Z-Score normalization)
     else:
         mu, sigma = norm["mean"], norm["std"]
         def norm_f(v): return (v - mu) / sigma
         def denorm_f(v): return v * sigma + mu
-
     work_norm = norm_f(work)
 
+    # ---------------- Import window, horizon and training percentage ----------------
     seq_len = int(cfg["seq_len"])
     horizon = int(cfg["horizon"])
     cutoff_idx_price = int(cfg["cutoff_idx_price"])
@@ -98,19 +105,18 @@ def main():
         raise ValueError("Not enough target points before cutoff to build the input window.")
     window = work_norm[cutoff_idx_work - seq_len : cutoff_idx_work].astype(np.float32)  # (seq_len,)
 
-    # Model
+    # ---------------- The model ----------------
     model = LSTMRegressor(1, int(cfg["hidden_len"]), int(cfg["num_layers"]), float(cfg["dropout"]), horizon)
     model.load_state_dict(model_state)
     model.eval()
 
-    # One forward pass → next H normalized targets
+    # ---------------- One forward pass (next H normalized targets) ----------------
     x = torch.from_numpy(window[None, :, None])  # (1, seq_len, 1)
     with torch.no_grad():
         yhat_norm = model(x).cpu().numpy().squeeze(0)  # (H,)
-
     preds_target = denorm_f(yhat_norm)  # to target space (price / logreturn / delta)
 
-    # Reconstruct PRICE path
+    # ---------------- Reconstruct PRICE path ----------------
     if tgt == "price":
         preds_price = preds_target
     else:
@@ -124,18 +130,18 @@ def main():
             preds_price.append(p)
         preds_price = np.array(preds_price, dtype=float)
 
-    # Future business-day dates
+    # ---------------- Future business-day dates ----------------
     if "Date" in df.columns:
         last_date = pd.to_datetime(df["Date"].iloc[cutoff_idx_price - 1])
         future_dates = pd.bdate_range(last_date + pd.tseries.offsets.BDay(1), periods=horizon)
     else:
         future_dates = np.arange(cutoff_idx_price, cutoff_idx_price + horizon)
 
+    # ---------------- Output forecasted stock prices ----------------
     out = pd.DataFrame({"Date": future_dates, "y_pred": preds_price})
     out_path = artifacts / "future_preds.csv"
     out.to_csv(out_path, index=False)
     print(f"Saved forecast (next {horizon} steps) to {out_path}")
-
 
 if __name__ == "__main__":
     main()

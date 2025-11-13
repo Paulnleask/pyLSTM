@@ -342,8 +342,8 @@ def main():
         yhat_price = np.array(yhat_price)
         plot_dates = label_dates[train_mask]    # aligned dates (fix)
 
+    # ---------------- 7. Output training predictions and model state ----------------
     pd.DataFrame({"Date": plot_dates, "y_hat": yhat_price}).to_csv(outdir / "train_preds.csv", index=False)
-
     print("\nSaved:")
     print(f"  - {outdir/'model_state.pt'}")
     print(f"  - {outdir/'config.json'}")

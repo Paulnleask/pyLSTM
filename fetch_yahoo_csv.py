@@ -75,6 +75,6 @@ plt.xlabel("Date")
 plt.ylabel(f"Stock Price ($)")
 plt.legend()
 plt.tight_layout()
-out_png = f"Stock_Prices_{csv_title}.png"
+out_png = outdir / f"Stock_Prices_{csv_title}.png"
 plt.savefig(out_png, dpi=150)
 print(f"Saved plot to {out_png}")
